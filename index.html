@@ -1,69 +1,89 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Endless Tower Demo</title>
+  <title>Endless Tower Multiplayer</title>
   <style>
-    body { margin:0; background:#222; color:white; font-family:sans-serif; }
+    body { margin:0; background:#111; color:#fff; font-family:sans-serif; }
     #ui { position:absolute; top:10px; left:10px; }
-    canvas { background:#333; display:block; margin:0 auto; }
+    canvas { background:#222; display:block; margin:0 auto; border:2px solid #555; }
   </style>
 </head>
 <body>
   <div id="ui">
     <span id="timer">Time: 5:00</span> | 
-    <span id="level">Level: 1</span>
+    <span id="level">Level: 1</span> | 
+    <span id="players">Players: 0</span>
   </div>
   <canvas id="gameCanvas" width="400" height="600"></canvas>
 
+  <script src="/socket.io/socket.io.js"></script>
   <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
+    const socket = io("http://localhost:3000");
 
-    let level = 1;
-    let player = { x:200, y:550, size:20 };
-    let spawnpoints = [{x:200,y:550}];
+    let player = { x:200, y:550, size:20, level:1 };
+    let players = {};
     let startTime = Date.now();
-    let duration = 5 * 60 * 1000; // 5 minutes
+    let duration = 5*60*1000;
 
-    function drawPlayer() {
-      ctx.fillStyle = "cyan";
-      ctx.fillRect(player.x, player.y, player.size, player.size);
-    }
+    socket.on("updatePlayers", (data) => {
+      players = data;
+      document.getElementById("players").innerText = "Players: " + Object.keys(players).length;
+    });
 
-    function drawTower() {
-      ctx.fillStyle = "white";
-      ctx.fillText("Tower Level " + level, 150, 50);
-    }
+    socket.on("updateTower", (tower) => {
+      console.log("Tower updated:", tower);
+    });
 
-    function update() {
+    function drawPlayers() {
       ctx.clearRect(0,0,canvas.width,canvas.height);
-      drawPlayer();
-      drawTower();
+      for (let id in players) {
+        let p = players[id];
+        ctx.fillStyle = "cyan";
+        ctx.fillRect(p.x, p.y, 20, 20);
+        ctx.fillText("Lv " + p.level, p.x, p.y-10);
+      }
+    }
 
-      // Timer
+    function updateTimer() {
       let elapsed = Date.now() - startTime;
       let remaining = duration - elapsed;
       if (remaining <= 0) {
         document.getElementById("timer").innerText = "Time: 0:00";
         ctx.fillStyle = "red";
         ctx.fillText("Game Over", 150, 300);
-        return;
+        return false;
       }
       let minutes = Math.floor(remaining/60000);
       let seconds = Math.floor((remaining%60000)/1000);
       document.getElementById("timer").innerText = 
         "Time: " + minutes + ":" + (seconds<10?"0":"") + seconds;
-
-      requestAnimationFrame(update);
+      return true;
     }
 
-    // Simulate climbing tower
-    setInterval(()=>{
-      level++;
-      document.getElementById("level").innerText = "Level: " + level;
-    }, 3000); // mỗi 3 giây lên 1 tầng
+    function gameLoop() {
+      if(updateTimer()) {
+        drawPlayers();
+        requestAnimationFrame(gameLoop);
+      }
+    }
 
-    update();
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowUp") player.y -= 10;
+      if (e.key === "ArrowDown") player.y += 10;
+      if (e.key === "ArrowRight") player.x += 10;
+      if (e.key === "ArrowLeft") player.x -= 10;
+      socket.emit("move", player);
+    });
+
+    setInterval(()=>{
+      player.level++;
+      document.getElementById("level").innerText = "Level: " + player.level;
+      socket.emit("nextLevel");
+    }, 5000);
+
+    gameLoop();
   </script>
 </body>
 </html>
