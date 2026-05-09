@@ -8,18 +8,31 @@ const server = http.createServer(app);
 const io = socketIO(server);
 
 let players = {};
+let towerLevels = {};
 
 io.on('connection', (socket) => {
   console.log('Player connected:', socket.id);
-  players[socket.id] = { x:200, y:550, level:1 };
+  players[socket.id] = { x:200, y:550, level:1, score:0 };
 
-  // gửi danh sách người chơi hiện tại
   io.emit('updatePlayers', players);
 
-  // nhận di chuyển từ client
   socket.on('move', (data) => {
     players[socket.id].x = data.x;
     players[socket.id].y = data.y;
+    io.emit('updatePlayers', players);
+  });
+
+  socket.on('nextLevel', () => {
+    players[socket.id].level++;
+    players[socket.id].score += 10;
+
+    if (!towerLevels[players[socket.id].level]) {
+      towerLevels[players[socket.id].level] = {
+        obstacles: Math.floor(Math.random()*5)+1
+      };
+    }
+
+    io.emit('updateTower', towerLevels);
     io.emit('updatePlayers', players);
   });
 
