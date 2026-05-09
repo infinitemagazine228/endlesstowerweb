@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Endless Tower Demo</title>
+  <style>
+    body { margin:0; background:#222; color:white; font-family:sans-serif; }
+    #ui { position:absolute; top:10px; left:10px; }
+    canvas { background:#333; display:block; margin:0 auto; }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <span id="timer">Time: 5:00</span> | 
+    <span id="level">Level: 1</span>
+  </div>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    let level = 1;
+    let player = { x:200, y:550, size:20 };
+    let spawnpoints = [{x:200,y:550}];
+    let startTime = Date.now();
+    let duration = 5 * 60 * 1000; // 5 minutes
+
+    function drawPlayer() {
+      ctx.fillStyle = "cyan";
+      ctx.fillRect(player.x, player.y, player.size, player.size);
+    }
+
+    function drawTower() {
+      ctx.fillStyle = "white";
+      ctx.fillText("Tower Level " + level, 150, 50);
+    }
+
+    function update() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      drawPlayer();
+      drawTower();
+
+      // Timer
+      let elapsed = Date.now() - startTime;
+      let remaining = duration - elapsed;
+      if (remaining <= 0) {
+        document.getElementById("timer").innerText = "Time: 0:00";
+        ctx.fillStyle = "red";
+        ctx.fillText("Game Over", 150, 300);
+        return;
+      }
+      let minutes = Math.floor(remaining/60000);
+      let seconds = Math.floor((remaining%60000)/1000);
+      document.getElementById("timer").innerText = 
+        "Time: " + minutes + ":" + (seconds<10?"0":"") + seconds;
+
+      requestAnimationFrame(update);
+    }
+
+    // Simulate climbing tower
+    setInterval(()=>{
+      level++;
+      document.getElementById("level").innerText = "Level: " + level;
+    }, 3000); // mỗi 3 giây lên 1 tầng
+
+    update();
+  </script>
+</body>
+</html>
